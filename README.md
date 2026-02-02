@@ -1,1 +1,1 @@
-# MedaiStudy
+# MediaStudy
