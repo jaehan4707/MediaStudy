@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "GgangTMP"
 include(":app")
- 
+include(":rtmp")
