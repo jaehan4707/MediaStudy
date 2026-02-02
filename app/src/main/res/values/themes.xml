@@ -2,4 +2,11 @@
 <resources>
 
     <style name="Theme.GgangTMP" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.GgangTMP.TransparentDialog" parent="android:Theme.Material.Light.Dialog">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
 </resources>
