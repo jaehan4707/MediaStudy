@@ -1,7 +1,6 @@
 package com.ggang.rtmp
 
 import com.ggang.rtmp.data.HandshakeState
-import com.ggang.rtmp.data.SocketState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +27,10 @@ class RtmpSocket: TcpSocket.Listener {
         _readyState.value = state
     }
 
+    private fun setSessionState(state: Boolean) {
+        _sessionState.value = state
+    }
+
     fun connect(host: String, port: Int, isSecure: Boolean) {
         clearSocket()
 
@@ -36,30 +39,73 @@ class RtmpSocket: TcpSocket.Listener {
         socket?.connect(host, port, isSecure)
     }
 
-    fun close(disconnected: Boolean) {
-        if (!isConnected) return
-    }
-
     fun enqueueWrite(buffer: ByteBuffer) {
         socket?.enqueueWrite(buffer)
     }
 
     fun createByBuffer(capacity: Int): ByteBuffer = socket?.createByteBuffer(capacity) ?: ByteBuffer.allocate(capacity)
 
-    override fun onDataReceived(buffer: ByteBuffer) {
-        TODO("Not yet implemented")
+    fun close(disconnected: Boolean) {
+        if (!isConnected) return
+        socket?.close(disconnected)
+        setReadyState(HandshakeState.Closing)
+
+        // TODO connection 종료 보내기
+
+        setReadyState(HandshakeState.Closed)
+        setSessionState(false)
     }
 
+    /**
+    * -----------------------
+    * */
+
     override fun onConnect() {
-        TODO("Not yet implemented")
+        handShake.clear()
+        setReadyState(HandshakeState.VersionSent)
+        socket?.enqueueWrite(handShake.c0Packet)
+        socket?.enqueueWrite(handShake.c1Packet)
+    }
+
+    override fun onDataReceived(buffer: ByteBuffer) {
+        when (readyState) {
+            HandshakeState.VersionSent -> {
+                if (buffer.limit() < RtmpHandshake.SIGNAL_SIZE + 1) {
+                    return
+                }
+                handShake.s0Packet = buffer
+                handShake.s1Packet = buffer
+                buffer.position(RtmpHandshake.SIGNAL_SIZE + 1)
+                setReadyState(HandshakeState.AckSent)
+
+                if (buffer.limit() - buffer.position() == RtmpHandshake.SIGNAL_SIZE) {
+                    onDataReceived(buffer.slice())
+                    buffer.position(3073)
+                }
+            }
+            HandshakeState.AckSent -> {
+                if (buffer.limit() < RtmpHandshake.SIGNAL_SIZE) {
+                    return
+                }
+                handShake.s2Packet = buffer
+                buffer.position(RtmpHandshake.SIGNAL_SIZE)
+                setReadyState(HandshakeState.HandshakeDone)
+                setSessionState(true)
+
+                // TODO connection 연결 보내기
+            }
+            HandshakeState.HandshakeDone -> { }
+        }
     }
 
     override fun onClose(disconnected: Boolean) {
-        TODO("Not yet implemented")
+        close(disconnected)
     }
 
     override fun onError() {
-        TODO("Not yet implemented")
+        close(false)
+
+        // TODO connection 에러 보내기
     }
 
     private fun clearSocket() {
