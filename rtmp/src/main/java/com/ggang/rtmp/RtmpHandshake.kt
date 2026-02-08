@@ -18,7 +18,7 @@ internal class RtmpHandshake {
             if (field.isInitialization()) {
                 val random = Random(System.currentTimeMillis())
                 field.position(4) // TIME
-                field.position(4) // ZERO
+                field.position(8) // ZERO
                 repeat(RANDOM_DATA_BUFFER_SIZE) { //RANDOM
                     field.put(random.nextInt().toByte())
                 }
