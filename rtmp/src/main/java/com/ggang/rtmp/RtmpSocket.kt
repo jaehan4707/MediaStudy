@@ -1,5 +1,6 @@
 package com.ggang.rtmp
 
+import android.util.Log
 import com.ggang.rtmp.data.HandshakeState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -68,13 +69,16 @@ class RtmpSocket: TcpSocket.Listener {
     }
 
     override fun onDataReceived(buffer: ByteBuffer) {
-        when (readyState) {
+        when (readyState.value) {
             HandshakeState.VersionSent -> {
+                Log.d("HandshakeState.VersionSent", "yeorooo 버퍼 내용 ${buffer}")
+
                 if (buffer.limit() < RtmpHandshake.SIGNAL_SIZE + 1) {
                     return
                 }
                 handShake.s0Packet = buffer
                 handShake.s1Packet = buffer
+                socket?.enqueueWrite(handShake.c2Packet)
                 buffer.position(RtmpHandshake.SIGNAL_SIZE + 1)
                 setReadyState(HandshakeState.AckSent)
 
@@ -84,6 +88,8 @@ class RtmpSocket: TcpSocket.Listener {
                 }
             }
             HandshakeState.AckSent -> {
+                Log.d("HandshakeState.AckSent", "yeorooo 버퍼 내용 ${buffer}")
+
                 if (buffer.limit() < RtmpHandshake.SIGNAL_SIZE) {
                     return
                 }
@@ -94,7 +100,10 @@ class RtmpSocket: TcpSocket.Listener {
 
                 // TODO connection 연결 보내기
             }
-            HandshakeState.HandshakeDone -> { }
+            HandshakeState.HandshakeDone -> {
+                Log.d("HandshakeState.HandshakeDone", "yeorooo 버퍼 내용 ${buffer}")
+            }
+            else -> {}
         }
     }
 
